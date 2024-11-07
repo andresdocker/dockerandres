@@ -1,0 +1,127 @@
+version: '3.5'
+
+services:
+  postgres-server:
+    image: postgres:13-alpine
+    volumes:
+      - ./zbx_env/var/lib/postgresql/data:/var/lib/postgresql/data:rw
+      - ./ZBX_CA_FILE:/run/secrets/root-ca.pem:ro
+      - ./ZBX_DB_CERT_FILE:/run/secrets/server-cert.pem:ro
+      - ./ZBX_DB_KEY_FILE:/run/secrets/server-key.pem:ro
+    environment:
+      - POSTGRES_PASSWORD=zabbix
+      - POSTGRES_USER=zabbix
+      - POSTGRES_DB=zabbix
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    image: zabbix/zabbix-server-pgsql
+    ports:
+      - "10051:10051"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /zbx_env/usr/lib/zabbix/alertscripts:/usr/lib/zabbix/alertscripts:ro
+      - /zbx_env/usr/lib/zabbix/externalscripts:/usr/lib/zabbix/externalscripts:ro
+      - /zbx_env/var/lib/zabbix/export:/var/lib/zabbix/export:rw
+      - /zbx_env/usr/lib/zabbix/modules:/var/lib/zabbix/modules:ro
+      - /zbx_env/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
+      - /zbx_env/var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys:ro
+      - /zbx_env/var/lib/zabbix/mibs:/var/lib/zabbix/mibs:ro
+      - /zbx_env/var/lib/zabbix/snmptraps:/var/lib/zabbix/snmptraps:ro
+    restart: always
+    depends_on:
+      - postgres-server
+    environment:
+      - POSTGRES_USER=zabbix
+      - POSTGRES_PASSWORD=zabbix
+      - POSTGRES_DB=zabbix
+      - ZBX_HISTORYSTORAGEURL=types=log,text
+      - ZBX_DEBUGLEVEL=4
+      - ZBX_HOUSEKEEPERFREQUENCY=1
+      - ZBX_MAXHOUSEKEEPERDELETE=5000
+      - ZBX_PROXYCONFIGFREQUENCY=3600
+
+  web-nginx-pgsql:
+    image: zabbix/zabbix-web-nginx-pgsql
+    ports:
+      - "8084:8080"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /zbx_env/ssl/nginx:/etc/ssl/nginx:ro
+      - /zbx_env/usr/share/zabbix/modules:/usr/share/zabbix/modules/:ro
+    restart: always
+    depends_on:
+      - server
+      - postgres-server
+    environment:
+      - DB_SERVER_HOST=postgres-server
+      - POSTGRES_USER=zabbix
+      - POSTGRES_PASSWORD=zabbix
+      - POSTGRES_DB=zabbix
+      - ZBX_SERVER_HOST=server
+      - PHP_TZ=Europe/Moscow
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "10"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  agent:
+    image: zabbix/zabbix-agent
+    ports:
+      - "10050:10050"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /zbx_env/var/lib/zabbix/zabbix_agentd.d:/etc/zabbix/zabbix_agentd.d:ro
+      - /zbx_env/usr/lib/zabbix/modules:/var/lib/zabbix/modules:ro
+      - /zbx_env/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
+      - /zbx_env/var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys:ro
+    privileged: true
+    pid: "host"
+    restart: always
+    depends_on:
+      - server
+    environment:
+      - ZBX_SERVER_HOST=server
+
+  snmptraps:
+    image: zabbix/zabbix-snmptraps
+    ports:
+      - "162:162/udp"
+    volumes:
+      - /snmptraps:/var/lib/zabbix/snmptraps:rw
+    restart: always
+    depends_on:
+      - server
+    environment:
+      - ZBX_SERVER_HOST=server
+
+  jenkins:
+    container_name: jenkins-blueocean
+    build: .  # Esto indica que debe construir la imagen desde el Dockerfile local
+    user: root
+    environment:
+      - DOCKER_HOST=tcp://docker:2376
+      - DOCKER_CERT_PATH=/certs/client
+      - DOCKER_TLS_VERIFY=1
+    ports:
+      - "8080:8080"
+      - "50000:50000"  # Puerto JNLP para agentes remotos
+    volumes:
+      - ./jenkins-data:/var/jenkins_home
+      - ./jenkins-docker-certs:/certs/client:ro
+      - /var/run/docker.sock:/var/run/docker.sock  # Permitir que Jenkins interactúe con Docker
+    mem_limit: '2G'
