@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panel de Servicios</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #FF462D; /* Color de Kyndryl */
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .service-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .service {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .service:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .service img {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+        }
+        .service a {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            color: white;
+            background-color: #FF462D; /* Color de Kyndryl */
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        .service a:hover {
+            background-color: #D63E27; /* Versión más oscura del color */
+        }
+        footer {
+            margin-top: 50px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Panel de Servicios</h1>
+        <p>Accede rápidamente a los servicios disponibles</p>
+    </header>
+    <div class="container">
+        <div class="service-list">
+            <div class="service">
+                <img src="img/portainer.png" alt="Portainer">
+                <h2>Portainer</h2>
+                <p>Gestiona tus contenedores de Docker.</p> <!-- Eliminé "fácilmente" -->
+                <a href="/portainer/">Ir a Portainer</a>
+            </div>
+            <div class="service">
+                <img src="img/jenkins.png" alt="Jenkins">
+                <h2>Jenkins</h2>
+                <p>Automatiza tus pipelines de CI/CD.</p>
+                <a href="/jenkins/">Ir a Jenkins</a>
+            </div>
+            <div class="service">
+                <img src="img/zabbix.png" alt="Zabbix">
+                <h2>Zabbix</h2>
+                <p>Monitoreo de infraestructura y sistemas.</p>
+                <a href="/zabbix/">Ir a Zabbix</a>
+            </div>
+            <div class="service">
+                <img src="img/owncloud.png" alt="OwnCloud">
+                <h2>OwnCloud</h2>
+                <p>Almacenamiento personal en la nube.</p>
+                <a href="/owncloud/">Ir a OwnCloud</a>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <p>Desarrollado por Andres Meza Poma | © 2024</p>
+    </footer>
+</body>
+</html>
