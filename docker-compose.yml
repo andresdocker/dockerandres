@@ -1,0 +1,107 @@
+version: '3.5'
+
+services:
+  # -------------------------
+  # Nginx (Proxy Reverso)
+  # -------------------------
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - zabbix-net
+
+  # -------------------------
+  # OwnCloud (Almacenamiento Personal en la Nube)
+  # -------------------------
+  owncloud:
+    image: owncloud/server:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - owncloud-data:/mnt/data
+    networks:
+      - zabbix-net
+
+  # -------------------------
+  # Otros servicios existentes
+  # -------------------------
+  postgres-server:
+    image: postgres:13-alpine
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=zabbix
+      - POSTGRES_USER=zabbix
+      - POSTGRES_DB=zabbix
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zabbix-net
+
+  server:
+    image: zabbix/zabbix-server-pgsql
+    depends_on:
+      - postgres-server
+    environment:
+      - POSTGRES_PASSWORD=zabbix
+      - POSTGRES_USER=zabbix
+      - POSTGRES_DB=zabbix
+      - DB_SERVER_HOST=postgres-server
+    ports:
+      - "10051:10051"
+    networks:
+      - zabbix-net
+
+  web-nginx-pgsql:
+    image: zabbix/zabbix-web-nginx-pgsql
+    depends_on:
+      - server
+      - postgres-server
+    environment:
+      - DB_SERVER_HOST=postgres-server
+      - POSTGRES_PASSWORD=zabbix
+      - POSTGRES_USER=zabbix
+      - POSTGRES_DB=zabbix
+      - ZBX_SERVER_HOST=server
+    ports:
+      - "8084:8080"
+    networks:
+      - zabbix-net
+
+  jenkins:
+    build: .
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - zabbix-net
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    networks:
+      - zabbix-net
+
+volumes:
+  postgres-data:
+  jenkins-data:
+  portainer-data:
+  owncloud-data:
+
+networks:
+  zabbix-net:
